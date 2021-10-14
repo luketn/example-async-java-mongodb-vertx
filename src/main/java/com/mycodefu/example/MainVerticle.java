@@ -7,11 +7,11 @@ import io.vertx.core.*;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.Router;
+import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.ErrorHandler;
 import io.vertx.ext.web.handler.StaticHandler;
 
-import static com.mycodefu.example.MongoAccess.createSampleData;
-import static com.mycodefu.example.MongoAccess.getExamples;
+import static com.mycodefu.example.MongoAccess.*;
 
 public class MainVerticle extends AbstractVerticle {
   private MongoClient mongo;
@@ -35,9 +35,11 @@ public class MainVerticle extends AbstractVerticle {
 
   private Router initRoutes() {
     this.router = Router.router(vertx);
-    router.route().failureHandler(ErrorHandler.create(vertx));
+    router.route().failureHandler(ErrorHandler.create(vertx, config().getBoolean("devmode", false)));
     router.route().handler(StaticHandler.create().setCachingEnabled(false));
-    router.get("/examples.json∏").respond(ctx -> getExamples(mongo));
+    router.get("/examples.json").respond(ctx -> getExamples(mongo));
+    router.post("/examples.json").handler(BodyHandler.create()).respond(ctx -> insertExample(mongo, Data.ExampleData.fromJson(ctx.getBodyAsJson())));
+    router.delete("/examples.json").handler(BodyHandler.create()).respond(ctx -> deleteExample(mongo, ctx.queryParam("id").get(0)));
     return router;
   }
 

@@ -5,6 +5,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.mongo.FindOptions;
 import io.vertx.ext.mongo.MongoClient;
 
 import java.util.ArrayList;
@@ -15,7 +16,20 @@ public class MongoAccess {
   private final static String collectionName = "Examples";
 
   public static Future<List<Data.ExampleData>> getExamples(MongoClient mongo) {
-    return mongo.find(collectionName, new JsonObject()).map(Data.ExampleData::fromJson);
+    return getExamples(mongo, 1);
+  }
+
+  public static Future<List<Data.ExampleData>> getExamples(MongoClient mongo, int pageNumber) {
+    return mongo.findWithOptions(collectionName, new JsonObject(), new FindOptions().setSkip((pageNumber - 1) * 10).setLimit(10)).map(Data.ExampleData::fromJson);
+  }
+
+  public static Future<Data.ExampleData> insertExample(MongoClient mongo, Data.ExampleData example) {
+    return mongo.insert(collectionName, JsonObject.mapFrom(example)).map(example::withId);
+  }
+
+  public static Future<Data.SuccessResult> deleteExample(MongoClient mongo, String id) {
+    return mongo.removeDocument(collectionName, new JsonObject().put("_id", id))
+      .map(mongoClientDeleteResult -> new Data.SuccessResult(mongoClientDeleteResult.getRemovedCount() == 1));
   }
 
   public static Future<List<Data.ExampleData>> createSampleData(MongoClient mongo) {
@@ -33,7 +47,7 @@ public class MongoAccess {
 
           List<Future> insertedFutures = new ArrayList<>();
           for (Data.ExampleData example : examples) {
-            insertedFutures.add(mongo.insert(collectionName, JsonObject.mapFrom(example)).map(example::withId));
+            insertedFutures.add(insertExample(mongo, example));
           }
           CompositeFuture.all(insertedFutures)
             .onFailure(result::fail)

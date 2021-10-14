@@ -2,5 +2,6 @@
   "http.port": 8082,
   "connection_string": "mongodb://localhost:27017",
   "db_name": "MyCodeFu",
-  "useObjectId": true
+  "useObjectId": true,
+  "devmode": true
 }

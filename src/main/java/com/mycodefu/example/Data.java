@@ -21,7 +21,7 @@ public class Data {
 
     public static ExampleData fromJson(JsonObject jsonObject) {
       return new ExampleData(
-        jsonObject.getString("_id"),
+        jsonObject.containsKey("_id") ? jsonObject.getString("_id") : null,
         jsonObject.getString("name"),
         jsonObject.getInteger("age")
       );
@@ -34,5 +34,11 @@ public class Data {
       }
       return result;
     }
+  }
+
+  @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
+  @JsonSerialize
+  public static record SuccessResult(boolean success) {
+
   }
 }
