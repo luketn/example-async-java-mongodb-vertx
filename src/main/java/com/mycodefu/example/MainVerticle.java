@@ -18,11 +18,11 @@ public class MainVerticle extends AbstractVerticle {
   private Router router;
 
   @Override
-  public void start(Promise<Void> startPromise) throws Exception {
+  public void start(Promise<Void> startPromise) {
     initMongo();
     initRoutes();
 
-    final int listening_port = config().getInteger("http.port", 8888);
+    final int listening_port = config().getInteger("http_port", 8888);
     vertx.createHttpServer().requestHandler(router).listen(listening_port, http -> {
       if (http.succeeded()) {
         startPromise.complete();
@@ -39,7 +39,7 @@ public class MainVerticle extends AbstractVerticle {
     router.route().handler(StaticHandler.create().setCachingEnabled(false));
     router.get("/examples.json").respond(ctx -> getExamples(mongo));
     router.post("/examples.json").handler(BodyHandler.create()).respond(ctx -> insertExample(mongo, Data.ExampleData.fromJson(ctx.getBodyAsJson())));
-    router.delete("/examples.json").handler(BodyHandler.create()).respond(ctx -> deleteExample(mongo, ctx.queryParam("id").get(0)));
+    router.delete("/examples.json").respond(ctx -> deleteExample(mongo, ctx.queryParam("id").get(0)));
     return router;
   }
 
@@ -51,43 +51,5 @@ public class MainVerticle extends AbstractVerticle {
     }).onSuccess(ids -> {
       System.out.printf("Initialized MongoDB with test data (%s)!\n", ids);
     });
-  }
-
-
-  public static void main(String[] args) {
-    final Vertx vertx = Vertx.vertx(new VertxOptions().setWorkerPoolSize(100));
-
-    ConfigStoreOptions fileStore = new ConfigStoreOptions()
-      .setType("file")
-      .setConfig(new JsonObject().put("path", "conf.json"));
-
-    ConfigStoreOptions sysPropsStore = new ConfigStoreOptions().setType("sys");
-
-    ConfigRetrieverOptions options = new ConfigRetrieverOptions()
-      .addStore(fileStore)
-      .addStore(sysPropsStore);
-
-    ConfigRetriever.create(vertx, options).getConfig()
-      .onFailure(throwable -> {
-        System.out.println("Failed to read the config!");
-        throwable.printStackTrace();
-        System.exit(2);
-      })
-      .onSuccess(entries -> {
-        System.out.println("Successfully loaded config.");
-
-        DeploymentOptions deploymentOptions = new DeploymentOptions();
-        deploymentOptions.setConfig(entries);
-
-        vertx.deployVerticle(MainVerticle.class, deploymentOptions)
-          .onFailure(throwable -> {
-            System.out.println("Failed deployment of MainVerticle!");
-            throwable.printStackTrace();
-            System.exit(1);
-          })
-          .onSuccess(id -> {
-            System.out.printf("Successfully deployed MainVerticle (ID: %s)!\n\n", id);
-          });
-      });
   }
 }
