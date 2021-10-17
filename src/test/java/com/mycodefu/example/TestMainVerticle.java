@@ -40,7 +40,7 @@ public class TestMainVerticle {
 
   DeploymentOptions options = new DeploymentOptions()
     .setConfig(new JsonObject()
-      .put("http.port", TEST_PORT)
+      .put("http_port", TEST_PORT)
       .put("db_name", "Test")
       .put("connection_string",
         "mongodb://localhost:" + MONGO_PORT)
