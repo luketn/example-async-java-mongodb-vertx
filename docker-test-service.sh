@@ -1,7 +1,7 @@
 #!/bin/bash
 
 docker-compose up -d
-curl localhost:9090/examples.json | jq . > examples.json
+docker run --network example_async_java_mongodb_vertx appropriate/curl http://service:9090/examples.json | jq . > examples.json
 cat examples.json
 cat examples.json | jq -r '.[] | select(.name=="Luke") | .age' > age.txt
 
