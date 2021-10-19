@@ -29,9 +29,25 @@ jobs:
       - setup_remote_docker:
           version: 19.03.13
 #          docker_layer_caching: true
-      - run: |
-          echo "$DOCKER_PASS" | docker login --username $DOCKER_USER --password-stdin
-          ./docker-build.sh
+      - run:
+          name: Test Docker Build
+          command: |
+            ./docker-build-local.sh
+            ./docker-test-service.sh
+
+      - run:
+          name: Deploy
+          command: |
+            case $CIRCLE_BRANCH in
+              main*)
+                  echo "$DOCKER_PASS" | docker login --username $DOCKER_USER --password-stdin
+                  ./docker-build-publish.sh "v${CIRCLE_BUILD_NUM}"
+                  ;;
+              *)
+                  echo "Skipping deployment"
+                  ;;
+            esac
+
 
 # Invoke jobs via workflows
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows

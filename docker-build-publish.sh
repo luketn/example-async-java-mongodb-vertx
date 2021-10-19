@@ -15,7 +15,7 @@ ARCHITECTURES=$(echo $ARCHITECTURES_TO_BUILD | tr "," "\n")
 for ARCHITECTURE in $ARCHITECTURES
 do
   echo "Building $ARCHITECTURE"
-  docker build --platform "linux/${ARCHITECTURE}" -t "example-async-mongodb:${ARCHITECTURE}" -f "docker-${ARCHITECTURE}.Dockerfile" .
+  ./docker-build-local.sh "${ARCHITECTURE}" "${TAG_NAME}:${ARCHITECTURE}"
 
   ARCHITECTURE_TAG="${TAG}-${ARCHITECTURE}"
   docker tag "${TAG_NAME}:${ARCHITECTURE}" "${ARCHITECTURE_TAG}"

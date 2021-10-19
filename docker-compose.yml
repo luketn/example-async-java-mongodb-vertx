@@ -1,13 +1,29 @@
 version: "3.8"
 services:
+  service:
+    image: example-async-mongodb:latest
+#    image: luketn/example-async-mongodb:latest
+    container_name: ExampleAsyncMongoDBVertXService
+    ports:
+      - 9090:9090
+    environment:
+      - HTTP_PORT=9090
+      - CONNECTION_STRING=mongodb://mongodb:27017
+    depends_on:
+      - mongodb
+    networks: [service_db]
+
   mongodb:
     image : mongo:5.0.3
     container_name: MongoDBLocal
-    environment:
-      - PUID=1000
-      - PGID=1000
     volumes:
       - ./data:/data/db
+    restart: unless-stopped
     ports:
       - 27017:27017
-    restart: unless-stopped
+    networks: [service_db]
+
+networks:
+  service_db:
+    name: example_async_java_mongodb_vertx
+
