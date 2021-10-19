@@ -1,27 +1,133 @@
-= Example-async-mongodb
+= Example Async Mongodb and Vert.X Web API
 
 image:https://img.shields.io/badge/vert.x-4.1.5-purple.svg[link="https://vertx.io"]
 
+This is a demo of using Vert.X's asynchronous MongoDB driver and Web Server to implement a simple CRUD API.
+
+== Usage
+
+The application can be built, tested and packaged with maven:
+
+```
+./mvnw clean package
+```
+
+Then you can bundle the Java package into an efficient Docker image with:
+
+```
+./docker-build-local.sh
+```
+
+To run locally, use this command:
+
+```
+# (optional) Start MongoDB locally and expose on port 27017
+./docker-mongo.sh
+
+# Run the locally built container and connect it with the docker-run MongoDB
+docker run -p 8080:8080 -e CONNECTION_STRING="mongodb://[you're ip goes here]:27017" example-async-mongodb
+
+```
+
+To bundle and push to a DockerHub repository you can run this script:
+
+```
+./docker-build-publish.sh
+```
+
+== Interesting Features of the Code
+
+=== Vert.X Futures with MongoDB Async Driver
+The Vert.X model of generic Futures as the response type for most methods is really elegant.
+
+It allows you to compose functions into responses and keep a very lean set of code to define your endpoints.
+
+For example, here's how you define a GET HTTP endpoint:
+```Java
+router.get("/examples.json").respond(ctx -> getExamples(mongo));
+```
+
+The getExamples method returns a Future<serializable-type> tied to the output of the MongoDB driver:
+```Java
+public static Future<List<Data.ExampleData>> getExamples(MongoClient mongo, int pageNumber) {
+  return mongo
+           .findWithOptions(
+                   collectionName,
+                    new JsonObject(),
+                    new FindOptions()
+                        .setSkip((pageNumber - 1) * 10)
+                        .setLimit(10)
+           )
+           .map(Data.ExampleData::fromJson);
+}
+```
+
+=== Java 16 (Records)
+
+Note that the application is built with Java 16. One of the nice features we can take advantage of in Java 16 are Records.
+
+Using these immutable data structures allows us to safely cache and pass around instances without any danger of side-effects.
+
+Jackson (JSON serialiser) natively supports records in recent versions, however a small https://dev.to/brunooliveira/practical-java-16-using-jackson-to-serialize-records-4og4[tweak] is required to support them in older Jackson versions used by Vert.X.
+
+In order to support the POST of records to the service as well as from MongoDB, helper methods fromJson and toJson were used. There may be a better solution for this but I did not find it.
+
+```Java
+@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
+@JsonSerialize
+public static record ExampleData(String id, String name, int age) {
+    public ExampleData(String name, int age) {
+      this(null, name, age);
+    }
+
+    public ExampleData withId(String id) {
+      return new ExampleData(id, name, age);
+    }
+
+    public static ExampleData fromJson(JsonObject jsonObject) {
+      return new ExampleData(
+        jsonObject.containsKey("_id") ? jsonObject.getString("_id") : null,
+        jsonObject.getString("name"),
+        jsonObject.getInteger("age")
+      );
+    }
+
+    public static List<ExampleData> fromJson(List<JsonObject> jsonObjects) {
+      List<ExampleData> result = new ArrayList<>();
+      for (JsonObject jsonObject : jsonObjects) {
+        result.add(ExampleData.fromJson(jsonObject));
+      }
+      return result;
+    }
+}
+```
+
+== Vert.X Documentation
+
 This application was generated using http://start.vertx.io
 
-== Building
+
+=== Building
 
 To launch your tests:
+
 ```
 ./mvnw clean test
 ```
 
 To package your application:
+
 ```
 ./mvnw clean package
 ```
 
 To run your application:
+
 ```
 ./mvnw clean compile exec:java
 ```
 
-== Help
+=== Help
 
 * https://vertx.io/docs/[Vert.x Documentation]
 * https://stackoverflow.com/questions/tagged/vert.x?sort=newest&pageSize=15[Vert.x Stack Overflow]
